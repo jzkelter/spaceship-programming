@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.26
+# v0.19.40
 
 using Markdown
 using InteractiveUtils
@@ -15,6 +15,7 @@ macro bind(def, element)
 end
 
 # ╔═╡ 4a232500-bde2-40c8-b86c-abbf9b7b29df
+# Load packages
 begin	
 	using DataFrames
 	using Pickle	
@@ -25,9 +26,8 @@ begin
 	using PlutoUI # examples https://juliapluto.github.io/sample-notebook-previews/PlutoUI.jl.html
 	using HypertextLiteral
 	CairoMakie.activate!()
-	md"""# Imports"""
-
-	TableOfContents(title="Spaceship programming")
+	md"""# Imports"""	
+	"Load packages"
 end
 
 # ╔═╡ 3e4820be-a9a6-4d6e-83cf-3df31a2eac7f
@@ -71,6 +71,9 @@ md"""
 # Load Data
 """
 
+
+# ╔═╡ 01ca78b3-91fc-4727-a935-eb16bb58ab06
+TableOfContents(title="Spaceship programming")
 
 # ╔═╡ 4fc75e7f-4996-475d-bffc-ce7ea9f3571c
 function convert_to_time_since_start(
@@ -147,8 +150,8 @@ md"# Functions to Process Data"
 path_to_engines_data = "../data/2023/spaceship-logs-2023_page1_data_lsts.csv" # 2023
 
 # ╔═╡ a4d4671c-2239-4f15-992b-eaebed612b7d
-# path_to_responses_sketches = "../data/2022/spaceship programming responses sketches.csv" # 2022
-path_to_responses_sketches = "../data/2023/spaceship_programming_2023_responses.csv" # 2023
+# path_to_written_answers = "../data/2022/spaceship programming responses sketches.csv" # 2022
+path_to_written_answers = "../data/2023/spaceship_programming_2023_responses.csv" # 2023
 
 # ╔═╡ 1b68ca29-b630-43dc-b08f-279cdef48b25
 function read_spaceship_data_to_df()	
@@ -163,10 +166,48 @@ end
 # ╔═╡ fe555e43-ea27-4c79-b792-283cb53af0bb
 df = read_spaceship_data_to_df();
 
+# ╔═╡ 1118213f-63ff-486c-bd11-b7c10009a093
+function trajectory_doesnt_appear_earlier(timestamp, trajectory, temp_sdf)::Bool	
+	earlier_rows(timestamp::DateTime) = filter(:timestamp => <(timestamp), temp_sdf)
+	return trajectory ∉ earlier_rows(timestamp).trajectory
+end
+
+# ╔═╡ 9ec8934e-8590-4db0-b1a7-30210e7e0b10
+function get_student_df(tdf, userId)
+	temp_sdf = filter(:userId => ==(userId), tdf);
+	temp_sdf = filter(:engineSchedule => !=("[[[0,1],[0,0,0,0]]]"), temp_sdf)
+	temp_sdf[temp_sdf.final_speed .!= 0.0, :final_distance] .= NaN
+	temp_sdf
+	
+	# filter([:timestamp, :trajectory] => 
+			# (ts, traj) ->  trajectory_doesnt_appear_earlier(ts, traj, temp_sdf), 
+			# temp_sdf)
+end
+
+# ╔═╡ 398cc254-735e-45fa-98cf-cbf03cbdb276
+function read_student_answers_to_df()
+	path = path_to_written_answers
+	rdf =  CSV.read(path, DataFrame)
+	sort!(rdf, [:userId, :page_num, :question_num])
+	return rdf
+end
+
+# ╔═╡ 659a9008-0459-4159-90ce-2a7592d588d4
+rdf = read_student_answers_to_df();
+
 # ╔═╡ a382f583-5d37-4b14-9edb-834bb6b9a81d
 md"""
-userId: $(@bind userId Select(unique(df.userId)))
+userId: $(@bind userId Select(unique(rdf.userId)))
 """
+
+# ╔═╡ f6111216-2665-438b-a8e2-5df9f46f0665
+userId
+
+# ╔═╡ 8fe310b2-fa85-4bed-9440-7df8359926df
+sdf = get_student_df(df, userId);
+
+# ╔═╡ 9668b22b-37ea-4abb-86fd-d714adaa7083
+plot_final_dist_and_speed_vs_attempt(sdf)
 
 # ╔═╡ 1aa0537f-5c47-49c4-a027-fbbe864db0b3
 
@@ -218,54 +259,8 @@ function render_trajectories_and_blocks(sdf)
 	end
 end
 
-# ╔═╡ 972c20da-59b3-4721-bccb-1106f25d4c5c
-td = df.timestamp[1] - DateTime(2023, 02, 27, 17, 18, 27)
-
-# ╔═╡ ab99168a-44c2-4a8a-93bc-d64f64d32830
-let
-	total_seconds = Int(Dates.value(td) / 1000)
-	hours, remainder = divrem(total_seconds, 3600)
-	minutes, seconds = divrem(remainder, 60)
-	"$(hours)h $(minutes)m $(seconds)s"
-end
-
-# ╔═╡ 1118213f-63ff-486c-bd11-b7c10009a093
-function trajectory_doesnt_appear_earlier(timestamp, trajectory, temp_sdf)::Bool	
-	earlier_rows(timestamp::DateTime) = filter(:timestamp => <(timestamp), temp_sdf)
-	return trajectory ∉ earlier_rows(timestamp).trajectory
-end
-
-# ╔═╡ 9ec8934e-8590-4db0-b1a7-30210e7e0b10
-function get_student_df(tdf, userId)
-	temp_sdf = filter(:userId => ==(userId), tdf);
-	temp_sdf = filter(:engineSchedule => !=("[[[0,1],[0,0,0,0]]]"), temp_sdf)
-	temp_sdf[temp_sdf.final_speed .!= 0.0, :final_distance] .= NaN
-	temp_sdf
-	
-	# filter([:timestamp, :trajectory] => 
-			# (ts, traj) ->  trajectory_doesnt_appear_earlier(ts, traj, temp_sdf), 
-			# temp_sdf)
-end
-
-# ╔═╡ 8fe310b2-fa85-4bed-9440-7df8359926df
-sdf = get_student_df(df, userId);
-
-# ╔═╡ 9668b22b-37ea-4abb-86fd-d714adaa7083
-plot_final_dist_and_speed_vs_attempt(sdf)
-
 # ╔═╡ 539d0e77-7bef-49a5-8992-77ffa921aa96
 render_trajectories_and_blocks(sdf)
-
-# ╔═╡ 398cc254-735e-45fa-98cf-cbf03cbdb276
-function read_student_answers_to_df()
-	path = path_to_responses_sketches
-	rdf =  CSV.read(path, DataFrame)
-	sort!(rdf, [:userId, :page_num, :question_num])
-	return rdf
-end
-
-# ╔═╡ 659a9008-0459-4159-90ce-2a7592d588d4
-rdf = read_student_answers_to_df();
 
 # ╔═╡ 0808e23b-ee7f-4e6a-9696-51f8288a6721
 function get_student_rdf(trdf, userId)
@@ -278,24 +273,31 @@ srdf = get_student_rdf(rdf, userId);
 
 # ╔═╡ 3fdd08f7-5494-4768-91b7-fedb611e7c96
 function format_student_response(r)
-	if r[1:5] == "https" 
-		return  string("![](", r, ")\n")
+	if length(r) >= 5 && r[1:5] == "https" # response is link(s)
+		urls = filter(!=(""), split(r, "\n"))
+		str = ""
+		for url in urls
+			# display if it is a link to an image
+			str_start = (url[end-3:end] == ".png") ? "!" : ""						
+			str = string(str, ">", str_start, "[", url ,"](", url, ")\n")
+		end
+		return  str
 	else
 		return string(">", r)
-	end
+	end	
 end
 
 # ╔═╡ dba592d9-4852-4abe-b62f-0ef25c01b961
 function question_response_markdown_string(srdf)	
 	
 	str = ""
-	for i in 1:10
+	for i in 1:length(srdf.question)
 		str = string(str, "\n ", srdf.page_num[i], ".", srdf.question_num[i], ") ", srdf.question[i], "\n", format_student_response(srdf.student_response[i]))
 	end
 	str
 end
 
-# ╔═╡ a1fd8209-50b0-4dbb-968c-5908f49861ed
+# ╔═╡ 9ac75f8d-ba78-4d99-806a-8291febcc64e
 Markdown.parse(question_response_markdown_string(srdf))
 
 # ╔═╡ c3db8b96-7e88-41a1-87f3-958200fc167a
@@ -311,14 +313,14 @@ function quantify_attempts_by_type(sdf)
 	(total_attempts, unique_block_and_timings, unique_blocks)
 end
 
-# ╔═╡ 30938153-faf8-439a-93fa-1b328fcabcd4
+# ╔═╡ ff0303a0-acbc-4a3c-ac12-b77421c1e11a
 begin
 (total_attempts, unique_block_and_timings, unique_blocks) = quantify_attempts_by_type(sdf)
 md"""
 
-| **Total attempts**| **Unique blocks and timings**| **Unique blocks**| 
-| ----------------- | ---------------------------- | ---------------- |
-|$(total_attempts)  | $(unique_block_and_timings)  |$(unique_blocks)  |
+|**Unique blocks** | **Unique blocks and timings**| **Total attempts** | 
+| ---------------- | ---------------------------- | ------------------ |
+|$(unique_blocks)  | $(unique_block_and_timings)  | $(total_attempts)  |
 """
 end
 
@@ -1779,39 +1781,39 @@ version = "3.5.0+0"
 # ╟─3e4820be-a9a6-4d6e-83cf-3df31a2eac7f
 # ╟─d1123afe-395d-4712-a456-3d4c7a46757d
 # ╟─a382f583-5d37-4b14-9edb-834bb6b9a81d
+# ╟─f6111216-2665-438b-a8e2-5df9f46f0665
 # ╟─f9493fc3-5370-436f-965e-62fa8f46ec6f
 # ╟─9668b22b-37ea-4abb-86fd-d714adaa7083
-# ╟─30938153-faf8-439a-93fa-1b328fcabcd4
 # ╟─c6552640-3241-4da4-8b1f-a7439896635c
 # ╠═539d0e77-7bef-49a5-8992-77ffa921aa96
+# ╟─ff0303a0-acbc-4a3c-ac12-b77421c1e11a
 # ╟─57beaecc-304d-45f9-a446-847908905d76
-# ╠═a1fd8209-50b0-4dbb-968c-5908f49861ed
+# ╠═9ac75f8d-ba78-4d99-806a-8291febcc64e
 # ╟─20471c06-8844-4147-b89b-d0c0b4f35144
 # ╠═fe555e43-ea27-4c79-b792-283cb53af0bb
 # ╠═659a9008-0459-4159-90ce-2a7592d588d4
 # ╠═8fe310b2-fa85-4bed-9440-7df8359926df
 # ╠═39b7cefe-a973-4cc7-956d-11f74aec3b72
 # ╠═4a232500-bde2-40c8-b86c-abbf9b7b29df
-# ╠═972c20da-59b3-4721-bccb-1106f25d4c5c
-# ╠═ab99168a-44c2-4a8a-93bc-d64f64d32830
-# ╠═4fc75e7f-4996-475d-bffc-ce7ea9f3571c
+# ╠═01ca78b3-91fc-4727-a935-eb16bb58ab06
+# ╟─4fc75e7f-4996-475d-bffc-ce7ea9f3571c
 # ╟─f37d6dec-eef0-415f-ae5e-28d6de463666
-# ╠═85e0ebd2-f624-49da-a86e-738fb66e97f8
-# ╠═1aa0537f-5c47-49c4-a027-fbbe864db0b3
+# ╟─85e0ebd2-f624-49da-a86e-738fb66e97f8
+# ╟─1aa0537f-5c47-49c4-a027-fbbe864db0b3
 # ╟─95220c54-1b62-49c2-a9d9-f953866947d2
-# ╠═a2191369-6f65-4b6b-966b-61e722b31b98
+# ╟─a2191369-6f65-4b6b-966b-61e722b31b98
 # ╟─0f4f678c-28fa-40d1-8d59-41829a6ecd52
 # ╟─39599c5e-d7b0-4cec-827f-bf6816cccede
-# ╠═4741a9bd-a4f3-4dad-9ae4-bb3d8d3a25d0
-# ╠═a4d4671c-2239-4f15-992b-eaebed612b7d
+# ╟─4741a9bd-a4f3-4dad-9ae4-bb3d8d3a25d0
+# ╟─a4d4671c-2239-4f15-992b-eaebed612b7d
 # ╠═1b68ca29-b630-43dc-b08f-279cdef48b25
-# ╠═1118213f-63ff-486c-bd11-b7c10009a093
-# ╠═9ec8934e-8590-4db0-b1a7-30210e7e0b10
-# ╠═398cc254-735e-45fa-98cf-cbf03cbdb276
-# ╠═0808e23b-ee7f-4e6a-9696-51f8288a6721
+# ╟─1118213f-63ff-486c-bd11-b7c10009a093
+# ╟─9ec8934e-8590-4db0-b1a7-30210e7e0b10
+# ╟─398cc254-735e-45fa-98cf-cbf03cbdb276
+# ╟─0808e23b-ee7f-4e6a-9696-51f8288a6721
 # ╠═dba592d9-4852-4abe-b62f-0ef25c01b961
 # ╠═3fdd08f7-5494-4768-91b7-fedb611e7c96
-# ╠═c3db8b96-7e88-41a1-87f3-958200fc167a
+# ╟─c3db8b96-7e88-41a1-87f3-958200fc167a
 # ╟─463ac827-927b-413e-8a21-bb596a636209
 # ╟─396f5344-7790-4207-92b8-7c859cb907be
 # ╟─ddac986d-8ddb-4f39-af92-43713cdcd7dc
