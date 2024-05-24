@@ -7,19 +7,19 @@ using InteractiveUtils
 # ╔═╡ ff25d8e0-f1e1-11ee-33a2-b579d128e2b0
 begin	
 	using DataFrames	
+	using CategoricalArrays
 	using CSV
 	using Statistics
 	using CairoMakie	
 	using PlutoUI # examples https://juliapluto.github.io/sample-notebook-previews/PlutoUI.jl.html	
+	using Plots
 	using StatsPlots
 	using ColorSchemes
+	using Random
 	CairoMakie.activate!()
 	md"""# Imports"""	
 	"Load packages"
 end
-
-# ╔═╡ 2032253c-a1b3-4f60-be82-1b3b752b6a05
-df = CSV.read("../data/class_block_data_coded.csv", DataFrame);		
 
 # ╔═╡ 738a3320-4e49-4873-9f36-f209c4848de2
 TableOfContents(title="Class Spaceship Data")
@@ -36,18 +36,205 @@ md"""
 # Distributions of attempts
 """
 
+# ╔═╡ 3dd8857a-47dd-4bda-a613-574cc8af594e
+# Plots.plot(h1, h2, h3, h4, layout=(4, 1), size=(600, 1000))
+
+# ╔═╡ bd97f7f9-dc6e-42bf-9543-015a74f6e10b
+md"""
+# Correlations of attempts etc. 
+"""
+
+# ╔═╡ 56697652-c224-4a64-85ab-bc1a831a2009
+md"""
+**Conclusions from `total_attempts` vs `attempts_until_equal_and_opposite`**:
+
+- Most students reach out equal and opposite at the same time as solving it (this could be from getting hings)
+- Some figure out equal and opposite earlier and then tinker with timing 
+"""
+
+# ╔═╡ 03db23c1-0809-4a15-b576-cb9a612458be
+md"""
+**Notes about these correlations between total attempt and attempts to touch square**:
+
+- Some of the people with high attempts to touch square and low total attempts probably got help from a neighbor. 
+    - 28300 took 14 attempts to touch square is all over the place and then just jumps to the diagonal right solution
+    - 28302 took 9 attemps to touch square but jumped from very incorrect block configuration to the right one and then from the totally wrong timing (wait of 0) to the right one
+- Some didn't seem to get help:
+    - 28191 took 14 attempts to touch square, butu goes up and to the right and didn't seem to get help
+    - 28247 took 10 attempts to touch square and didn't seem to get help
+    - 28261 took 10 attempts to touch square and didn't seem to get help
+
+
+"""
+
+# ╔═╡ af7b5f3b-0486-4766-a8d3-cba7570a9bf4
+md"""
+# Block repetitions
+**Notes on the histograms below** 
+
+The two histograms below show a histogram of how many attempts (repetitions) each student did per unique block config and per unique `block_and_timing` config:
+
+- Most students repeated a each `block_and_timing` config between 1 and 2 times (second histogram). This means the slope on the scatter plot of these should be between 1-2 (which it is)
+- Most students repeated unique block configs between 2 and 3 times on average with the large majority between 1 and 5 times. This means the slope of the scatter plot of these should be between 2 and 3
+
+The outliers in these histograms had low numbers of block configs and `block_and_timing` configs, but they repeated them a lot.
+
+
+**To Do:**
+
+- Try putting on a box plot (below)
+- Try putting them on the same x-axis (below)
+- Try putting them in the same graph with different colors (didn't look good)
+- Distribution of number tinkers with same blocks (taking out repetitions that are same blocks and timing to leave same blocks with different timing) (below)
+- Distributions for individual students of repetition of block configs. (other notebook)
+"""
+
+# ╔═╡ 2acf2786-c320-4a30-9c72-807ea5132df3
+md"""
+# Correlations between programming and right/wrong questions
+
+**Notes**:
+
+- There doesn't seem to be any correlation between how quickly people solved the spaceship programming task and whether they got the right/wrong questions correct. 
+"""
+
+# ╔═╡ d532f7fe-152a-42ca-ad95-cfe57d3bba7d
+md"""
+# Formal/Informal Physics Correlations
+
+Findings:
+
+- There is a pretty normal distribuion of physics in the qualitative answers as we coded it which is nice. If we change informal physics to get a full point instead of 0.5, then the two columns on the right are both about equally tall and the two on the left are very short. 
+- There are some reasonable negative correlations between `physics_in_qual_answers` and the `num_block_configs` (and smaller for the others). This suggests perhaps that those with more physics understanding did better on both
+
+"""
+
+# ╔═╡ 379d0d82-2e2f-4e0d-acf1-21f9b8d4df9e
+md"""
+Report on negative correlations between `physics_in_qual_answers` and how long it took to solve the problem (i.e., those who solved it faster also demonstrated more physics knowledge in their written answers)
+"""
+
+# ╔═╡ faa1a589-17e0-4336-bd00-de1058d5a92a
+md"""
+## Formal/informal physics for each question
+"""
+
+# ╔═╡ 679d75c2-8e4a-487f-b588-bcdeb418dc55
+md"""
+# Score Distributions on Each Question
+"""
+
+# ╔═╡ 5f017c0d-a401-4596-b95c-b74bd18a4c2e
+md"""
+## graph questions
+"""
+
+# ╔═╡ 48e3a750-e7fb-49a1-8e61-768eb6e395b8
+md"""
+# Histograms of strategies
+
+- final strategy
+- timing strategy
+"""
+
+
+# ╔═╡ 1b31f226-5594-4b9d-b28d-9ee8bd9e660e
+
+
+
+
+# ╔═╡ 1bac4c71-9ac7-4c82-bbd9-ea441d056a04
+md"""
+# Data Loading and Pre-Processing
+"""
+
+# ╔═╡ 72019410-4f04-4245-8d6c-1b194c929911
+function translate_to_numeric(label)	
+	if ismissing(label) || contains(label, "incorrect")
+		return 0
+	elseif contains(label, "partially_correct")
+		return 0.5
+	elseif contains(label, "correct")
+		return 1
+	else
+		throw("No adequate option to make label numeric")
+	end
+end
+
+# ╔═╡ e9df0839-f4c6-4f97-89af-a71daf5b9cc1
+function no_physics(label)
+	options = ["incorrect", "no_why", "unclear", "no_explanation", "void"]
+	return ismissing(label) || any(s -> contains(label, s), options)
+end
+
+# ╔═╡ 5385deb2-e4ee-4015-87a2-3de38e798cc0
+function translate_physics_to_numeric(label)	
+	if no_physics(label) 
+		return 0
+	elseif contains(label, "informal_physics")
+		return 0.5
+	elseif contains(label, "physics") || contains(label, "second_law")
+		return 1
+	else
+		throw("No adequate option to make label numeric for: $label")
+	end
+end
+
+# ╔═╡ b83d5a7b-b1cf-46a9-b46a-99605e26ddf8
+begin
+	df = CSV.read("../data/class_block_data_coded.csv", DataFrame);		
+	df[!, "num_timing_tinkers"] = df[!, "num_unique_blocks_and_timing"] - df[!, "num_block_configs"]
+	
+	df[!, "q5_numeric"] = translate_to_numeric.(df[!, "q1.5_graph_left_vs_time"])
+	df[!, "q6_numeric"] = translate_to_numeric.(df[!, "q1.6_graph_force_x_direction"])
+
+	numeric_cols = [
+		"q1.3_direction_with_left_engine_what", 
+		"q1.4_after_engines_off_what",
+		"q1.8_sum_impulses_what",
+		"q5_numeric",
+		"q6_numeric"
+	]
+	df[!, "total_numeric"] = sum(eachcol(df[!, numeric_cols]))
+
+	df.final_path_shape = categorical(String.(df.final_path_shape))
+	df.solution_timing_mechanism = categorical(String.(df.solution_timing_mechanism))
+
+	physics_cols = [
+		"q1.3_direction_with_left_engine_why",
+		"q1.4_after_engines_off_why",
+		"q1.8_sum_impulses_why"		
+	]
+
+	# Give informal/formal physics scores for those answers
+	df[!, "q1.3_physics_score"] = translate_physics_to_numeric.(df[!, 
+		"q1.3_direction_with_left_engine_why"])
+	
+	df[!, "q1.4_physics_score"] = translate_physics_to_numeric.(df[!, "q1.4_after_engines_off_why"])
+
+	df[!, "q1.8_physics_score"] = translate_physics_to_numeric.(df[!, "q1.8_sum_impulses_why"])
+	
+	# Total physics score
+	df[!, "physics_in_qual_answers"] = sum(eachcol(translate_physics_to_numeric.(df[!, physics_cols])));
+
+	
+end
+
 # ╔═╡ e51eccba-8525-4cea-a927-95063f7a0e87
 h1 = histogram(df.total_attempts, 
 		bins=range(0, 60, length=15),
 		label="", 
 		xlabel="total attempts",
 		ylabel="number of students",
-		title="Distribution of attempts until solution"
+		title="Distribution of attempts until solution",
+		xlims=(0, 60),		
+	
 )
 
 # ╔═╡ e7f38346-da50-4161-bf65-945341da5b15
 h2 = histogram(df.attempts_to_touch_square, 
 	bins=range(0, 15, length=15),
+	xlims=(0, 15),
 	label="", 
 	xlabel="attempt to touch square",
 	ylabel="number of students",
@@ -57,6 +244,7 @@ h2 = histogram(df.attempts_to_touch_square,
 # ╔═╡ ab8d0462-1950-4935-a93c-67425f36ae7b
 h3 = histogram(df.num_block_configs, 
 	bins=range(0, 15, length=15),
+	xlims=(0, 15),
 	label="", 
 	xlabel="# of unique block configurations",
 	ylabel="number of students",
@@ -66,29 +254,128 @@ h3 = histogram(df.num_block_configs,
 # ╔═╡ dea3d8a9-0932-4328-87a7-fe8f251f5d62
 h4 = histogram(df.num_unique_blocks_and_timing, 
 	bins=range(0, 40, length=15),
+	xlims=(0, 35),
 	label="", 
 	xlabel="# of unique block and timing configurations",
 	ylabel="number of students",
 	title="Distribution of # of unique block and timing configurations"
 )
 
-# ╔═╡ 3dd8857a-47dd-4bda-a613-574cc8af594e
-# Plots.plot(h1, h2, h3, h4, layout=(4, 1), size=(600, 1000))
+# ╔═╡ 66aab63e-de11-4db8-bf3d-9b67d08646b2
+histogram(df.attempts_until_equal_and_opposite, 
+		bins=range(0, 60, length=15),
+		label="", 
+		xlabel="attempts until equal and opposite",
+		ylabel="number of students",
+		title="Distribution of attempts until equal and opposite",
+		xlims=(0, 60),		
+	
+)
 
-# ╔═╡ bd97f7f9-dc6e-42bf-9543-015a74f6e10b
-md"""
-# Correlations of attempts etc. 
-"""
+# ╔═╡ c1a3a883-0ebc-4add-a308-6ea71b157d0f
+Plots.scatter(df.attempts_to_touch_square, (df.total_attempts .+ rand(length(df.total_attempts))/2), 
+	alpha=0.4,
+	group=df.final_path_shape,
+	xlabel="attempts_to_touch_square",
+	ylabel="total attempts",
+	title="attempts to touch square vs total attempts",
+	xlims=(0, 15),
+	palette=:rainbow
+	)
 
-# ╔═╡ 26f1f9d5-9e57-4012-95d1-f0616f025629
-adf = dropmissing(df[:, [3, 7, 8, 9]]);
+# ╔═╡ 020376b4-2873-4a0a-b0c7-3889bbe68e83
+qdf = dropmissing(df[:, ["attempts_to_touch_square", "total_attempts", "total_numeric"]]);	
 
-# ╔═╡ ecde0ae1-75ba-4a94-a86d-62b726b2e227
-@df adf cornerplot(cols(1:4), 
+# ╔═╡ 2a05bed4-b17b-402f-9c69-21716237fc20
+@df qdf cornerplot(cols(1:3), 
 			size=(1000, 1000),
 			compact=true,
-			palette=:darkrainbow
+			markercolor=:darkrainbow,			
 			)
+
+# ╔═╡ adad3276-1888-46b8-8a82-ec29bdd0034a
+histogram(df.physics_in_qual_answers,
+	title="Physics in Qual Answers Distribution",
+	label=""	
+)
+
+# ╔═╡ 445eefce-828d-4a2b-972a-5dbb08a1ca98
+histogram(df[!, "q1.3_physics_score"],
+	title="Physics scores on q1.3 (direction with left engine)",
+	label="",
+	xticks = ([0.25, 0.75, 1.25], ["none", "informal", "formal"]),
+	yticks=0:1:15
+)
+
+# ╔═╡ a8e45837-d184-479e-b149-5e0901df2670
+histogram(df[!, "q1.4_physics_score"],
+	title="Physics scores on q1.4 (after engines off)",
+	label="",
+	xticks = ([0.25, 0.75, 1.25], ["none", "informal", "formal"]),
+	yticks=0:1:25
+)
+
+# ╔═╡ d0df12ea-ab47-4e22-9e60-9820af314051
+histogram(df[!, "q1.8_physics_score"],
+	title="Physics scores on q1.8 (sum impulses why)",
+	label="",
+	xticks = ([0.25, 1.25], ["none", "physics"]),
+	yticks=0:1:24
+)
+
+# ╔═╡ c8befde2-1821-42ad-b3a9-0f9df5e23e8f
+histogram(df[!, "q1.3_direction_with_left_engine_what"],
+	title="Scores on q3 (direction with left engine)",
+	label="",
+	xlims=(0,1.5),
+	xticks = ([0.25, 0.75, 1.25], ["incorrect", "partial", "correct"])
+)
+
+# ╔═╡ 38d4112e-a909-4b11-a39c-d2bd52360663
+histogram(df[!, "q1.4_after_engines_off_what"],
+	title="Scores on q4 (after engines off what happens)",
+	label="",
+	xlims=(0,1.5),
+	xticks = ([0.25, 0.75, 1.25], ["incorrect", "partial", "correct"])
+)
+
+# ╔═╡ c7e9e263-44f8-4a13-a56c-00f7872c31d6
+histogram(df[!, "q1.8_sum_impulses_what"],
+	title="Scores on q8 (sum of impulses)",
+	label="",
+	xlims=(0,1.5),
+	xticks = ([0.25, 0.75, 1.25], ["incorrect", "partial", "correct"])
+)
+
+# ╔═╡ 3d08b663-b6ab-4da9-8f2d-226a32c9c2fd
+histogram(df.q5_numeric,
+	title="Scores on first graph (q5)",
+	label="",
+	xticks = ([0.25, 0.75, 1.25], ["incorrect", "partial", "correct"])
+)
+
+# ╔═╡ 6008cc6a-339c-486d-859d-54e7a80c6d1b
+histogram(df.q6_numeric,
+	title="Scores on second graph (q6)",
+	label="",
+	xticks = ([0.25, 0.75, 1.25], ["incorrect", "partial", "correct"])
+)
+
+# ╔═╡ e02795d0-fa25-49a2-befa-7da869367a87
+let
+	counts = combine(groupby(df, :final_path_shape), nrow => :count)
+	@df counts StatsPlots.bar(:final_path_shape, :count, title="Distribution of final  path shape",)
+end
+
+
+# ╔═╡ 87856391-81df-45cf-85fc-bdd117973698
+let
+	counts = combine(groupby(df, :solution_timing_mechanism), nrow => :count)
+	@df counts StatsPlots.bar(:solution_timing_mechanism, :count, title="Distribution of Timing Adjustment Strategies",)
+end
+
+# ╔═╡ c24a4d9e-f4bf-474f-bc18-0f73ded29c77
+df
 
 # ╔═╡ b4b7e423-9597-40ea-91a7-f5a36a840209
 md"""
@@ -97,28 +384,135 @@ md"""
 
 # ╔═╡ ed00e348-9812-48e7-b28b-bfb41d05887b
 function named_cor(ldf)
-	[names(adf) DataFrame(cor(Matrix(adf)), names(adf))]
+	[names(ldf) DataFrame(cor(Matrix(ldf)), names(ldf))]
 end
+
+# ╔═╡ 26f1f9d5-9e57-4012-95d1-f0616f025629
+begin
+	adf_cols = ["attempts_to_touch_square","num_block_configs", "attempts_until_equal_and_opposite", "num_unique_blocks_and_timing", "total_attempts"]
+	adf = dropmissing(df[:, adf_cols])
+	named_cor(adf)
+end
+
+# ╔═╡ ecde0ae1-75ba-4a94-a86d-62b726b2e227
+@df adf cornerplot(cols(2:5), 
+			size=(1000, 1000),
+			compact=true,
+			markercolor=:darkrainbow,			
+			)
 
 # ╔═╡ f9103087-bf1f-48f2-bda4-a10a708e5197
 named_cor(adf)
+
+# ╔═╡ ef37bf79-f541-4703-8a22-b639bdb945be
+named_cor(qdf)
+
+# ╔═╡ 05529dd6-a0e1-4b5a-83a9-13135dd0b5fd
+begin
+	cols = ["physics_in_qual_answers", "num_block_configs", "num_unique_blocks_and_timing", "total_attempts", "total_numeric"]
+	pdf = dropmissing(df[:, cols]);
+	named_cor(pdf)
+end
+
+# ╔═╡ 5782b1a7-0659-4497-9cf8-b08a43395b18
+@df pdf cornerplot(cols(1:5), 
+			size=(1000, 1000),
+			compact=true,
+			markercolor=:darkrainbow,			
+			)
+
+# ╔═╡ aa3b9a00-494a-4d2d-bc9b-0d4dc856a76c
+function divide_two_cols(tdf, cols)
+	divide = row -> row[1] / row[2]
+	divide.(eachrow(dropmissing(df[!, cols])))
+end
+
+# ╔═╡ a0d4bdf7-b996-44be-bd50-36d7a82e7fe7
+let
+	data_sets =	[
+		divide_two_cols(df, ["total_attempts", "num_block_configs"]),
+		divide_two_cols(df, ["total_attempts", "num_unique_blocks_and_timing"])	
+	]
+	StatsPlots.boxplot(
+		divide_two_cols(df, ["total_attempts", "num_block_configs"]),
+		label="attempts per block config"
+	)
+
+	StatsPlots.boxplot!(
+		divide_two_cols(df, ["total_attempts", "num_unique_blocks_and_timing"])	,
+		label="attempts per block and timing config"
+	)
+end
+
+
+# ╔═╡ a0d31060-4575-47b7-b9c3-ff463866c25b
+histogram(
+	divide_two_cols(df, ["total_attempts", "num_block_configs"]),	
+	xlims=(0, 8),
+	yticks=0:2:16,
+	xticks=0:1:8,
+	# bins=range(0, 8, length=16),
+	# xticks=0:0.5:8,
+	title="Attempts per block config distribution",
+	xlabel="attempts per block config",
+	ylabel="num students",
+	label=""	
+	
+)
+
+# ╔═╡ 1d8a583a-3ab9-4085-9195-009491d1a36c
+histogram(
+	divide_two_cols(df, ["total_attempts", "num_unique_blocks_and_timing"]),		
+	ylims=(0,12),
+	xlims=(0, 8),	
+	xticks=0:.5:8,
+	bins=range(0, 3, length=16),	
+	title="Attempts per block_and_timing config distribution",
+	xlabel="attempts per block config",
+	ylabel="num students",
+	label=""	
+	
+)
+
+# ╔═╡ 2c98b26d-7c75-4d06-b562-8c581b1e3c07
+# 0 means they did the block config only once (they never tinkered with just timing)
+histogram(
+	divide_two_cols(df, ["num_timing_tinkers", "num_block_configs"]),		
+	ylims=(0,8),
+	xlims=(0, 3),	
+	xticks=0:.5:8,
+	bins=range(0, 3, length=16),	
+	title="Timing tinkers per block config distribution",
+	xlabel="time tinkers per block config",
+	ylabel="num students",
+	label=""	
+	
+)
+
+# ╔═╡ 539f47fb-3b2a-4a1a-8ac3-852c2091c26d
+mean(divide_two_cols(df, ["num_timing_tinkers", "num_block_configs"]))
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 
 [compat]
 CSV = "~0.10.12"
 CairoMakie = "~0.11.9"
+CategoricalArrays = "~0.10.8"
 ColorSchemes = "~3.24.0"
 DataFrames = "~1.6.1"
+Plots = "~1.39.0"
 PlutoUI = "~0.7.58"
 StatsPlots = "~0.15.7"
 """
@@ -129,7 +523,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.9.0"
 manifest_format = "2.0"
-project_hash = "0542307367267391f24a450538cb12a0f13fd017"
+project_hash = "39509c40a95fcacfc0504e1e7340ad5f1dc5dd82"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -296,6 +690,24 @@ deps = ["LinearAlgebra"]
 git-tree-sha1 = "f641eb0a4f00c343bbc32346e1217b86f3ce9dad"
 uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 version = "0.5.1"
+
+[[deps.CategoricalArrays]]
+deps = ["DataAPI", "Future", "Missings", "Printf", "Requires", "Statistics", "Unicode"]
+git-tree-sha1 = "1568b28f91293458345dabba6a5ea3f183250a61"
+uuid = "324d7699-5711-5eae-9e2f-1d82baa6b597"
+version = "0.10.8"
+
+    [deps.CategoricalArrays.extensions]
+    CategoricalArraysJSONExt = "JSON"
+    CategoricalArraysRecipesBaseExt = "RecipesBase"
+    CategoricalArraysSentinelArraysExt = "SentinelArrays"
+    CategoricalArraysStructTypesExt = "StructTypes"
+
+    [deps.CategoricalArrays.weakdeps]
+    JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+    RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+    SentinelArrays = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
+    StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra"]
@@ -2261,20 +2673,60 @@ version = "1.4.1+1"
 
 # ╔═╡ Cell order:
 # ╠═ff25d8e0-f1e1-11ee-33a2-b579d128e2b0
-# ╠═2032253c-a1b3-4f60-be82-1b3b752b6a05
 # ╠═738a3320-4e49-4873-9f36-f209c4848de2
-# ╠═b25ef6ce-3c73-4a03-a0d2-bf81a33c4a3b
+# ╟─b25ef6ce-3c73-4a03-a0d2-bf81a33c4a3b
 # ╟─87bae0a2-db56-4233-baf9-4d18c4f6a825
-# ╟─e51eccba-8525-4cea-a927-95063f7a0e87
+# ╠═e51eccba-8525-4cea-a927-95063f7a0e87
 # ╟─e7f38346-da50-4161-bf65-945341da5b15
 # ╟─ab8d0462-1950-4935-a93c-67425f36ae7b
 # ╟─dea3d8a9-0932-4328-87a7-fe8f251f5d62
+# ╠═66aab63e-de11-4db8-bf3d-9b67d08646b2
 # ╠═3dd8857a-47dd-4bda-a613-574cc8af594e
 # ╟─bd97f7f9-dc6e-42bf-9543-015a74f6e10b
 # ╠═26f1f9d5-9e57-4012-95d1-f0616f025629
-# ╟─ecde0ae1-75ba-4a94-a86d-62b726b2e227
+# ╠═ecde0ae1-75ba-4a94-a86d-62b726b2e227
+# ╠═56697652-c224-4a64-85ab-bc1a831a2009
+# ╟─c1a3a883-0ebc-4add-a308-6ea71b157d0f
+# ╟─03db23c1-0809-4a15-b576-cb9a612458be
 # ╠═f9103087-bf1f-48f2-bda4-a10a708e5197
+# ╟─af7b5f3b-0486-4766-a8d3-cba7570a9bf4
+# ╟─a0d4bdf7-b996-44be-bd50-36d7a82e7fe7
+# ╟─a0d31060-4575-47b7-b9c3-ff463866c25b
+# ╠═1d8a583a-3ab9-4085-9195-009491d1a36c
+# ╠═2c98b26d-7c75-4d06-b562-8c581b1e3c07
+# ╠═539f47fb-3b2a-4a1a-8ac3-852c2091c26d
+# ╟─2acf2786-c320-4a30-9c72-807ea5132df3
+# ╠═020376b4-2873-4a0a-b0c7-3889bbe68e83
+# ╠═2a05bed4-b17b-402f-9c69-21716237fc20
+# ╠═ef37bf79-f541-4703-8a22-b639bdb945be
+# ╟─d532f7fe-152a-42ca-ad95-cfe57d3bba7d
+# ╟─adad3276-1888-46b8-8a82-ec29bdd0034a
+# ╟─05529dd6-a0e1-4b5a-83a9-13135dd0b5fd
+# ╠═5782b1a7-0659-4497-9cf8-b08a43395b18
+# ╟─379d0d82-2e2f-4e0d-acf1-21f9b8d4df9e
+# ╟─faa1a589-17e0-4336-bd00-de1058d5a92a
+# ╟─445eefce-828d-4a2b-972a-5dbb08a1ca98
+# ╟─a8e45837-d184-479e-b149-5e0901df2670
+# ╠═d0df12ea-ab47-4e22-9e60-9820af314051
+# ╟─679d75c2-8e4a-487f-b588-bcdeb418dc55
+# ╟─c8befde2-1821-42ad-b3a9-0f9df5e23e8f
+# ╟─38d4112e-a909-4b11-a39c-d2bd52360663
+# ╟─c7e9e263-44f8-4a13-a56c-00f7872c31d6
+# ╟─5f017c0d-a401-4596-b95c-b74bd18a4c2e
+# ╠═3d08b663-b6ab-4da9-8f2d-226a32c9c2fd
+# ╟─6008cc6a-339c-486d-859d-54e7a80c6d1b
+# ╟─48e3a750-e7fb-49a1-8e61-768eb6e395b8
+# ╠═e02795d0-fa25-49a2-befa-7da869367a87
+# ╠═87856391-81df-45cf-85fc-bdd117973698
+# ╠═1b31f226-5594-4b9d-b28d-9ee8bd9e660e
+# ╟─1bac4c71-9ac7-4c82-bbd9-ea441d056a04
+# ╠═c24a4d9e-f4bf-474f-bc18-0f73ded29c77
+# ╠═b83d5a7b-b1cf-46a9-b46a-99605e26ddf8
+# ╠═72019410-4f04-4245-8d6c-1b194c929911
+# ╠═5385deb2-e4ee-4015-87a2-3de38e798cc0
+# ╠═e9df0839-f4c6-4f97-89af-a71daf5b9cc1
 # ╟─b4b7e423-9597-40ea-91a7-f5a36a840209
 # ╠═ed00e348-9812-48e7-b28b-bfb41d05887b
+# ╠═aa3b9a00-494a-4d2d-bc9b-0d4dc856a76c
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
